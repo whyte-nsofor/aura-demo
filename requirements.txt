@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-pysqlcipher3
 pydantic
 numpy
 usearch
