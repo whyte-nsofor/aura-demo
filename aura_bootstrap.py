@@ -1,5 +1,5 @@
 # ==============================================================================
-# AURA ENTERPRISE AI ARCHITECTURE - COMPLETE UNIFIED BOOTSTRAP (v6.4)
+# AURA ENTERPRISE AI ARCHITECTURE - COMPLETE UNIFIED BOOTSTRAP (v6.4 FINAL)
 # Copyright (c) 2025-2026 Whyte Chikwendu Nsofor. All rights reserved.
 #
 # Proprietary & Confidential Software.
@@ -8,13 +8,14 @@
 
 """
 ================================================================================
-AURA ENTERPRISE AI ARCHITECTURE - COMPLETE UNIFIED BOOTSTRAP (v6.4)
+AURA ENTERPRISE AI ARCHITECTURE - COMPLETE UNIFIED BOOTSTRAP (v6.4 FINAL)
 ================================================================================
 Complete Turnkey Enterprise Platform with:
 - Full React dashboard (6 tabs: Memory, Voice, UI, MCP, DAG, Security)
 - API key authentication, /healthz, auto-migrations
 - HNSW vector index, Zero-Trust runtime, multi-agent orchestration
 - Embedded frontend build system (auto‑builds on startup if Node.js is present)
+- Serves React UI from / (root) without interfering with API endpoints
 ================================================================================
 """
 
@@ -540,7 +541,7 @@ class AURARuntimeEngine:
 # ------------------------------------------------------------------------------
 # 7. FASTAPI APPLICATION
 # ------------------------------------------------------------------------------
-app = FastAPI(title="AURA Enterprise AI Stack", version="6.4 Complete Turnkey")
+app = FastAPI(title="AURA Enterprise AI Stack", version="6.4 Final")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -569,32 +570,6 @@ async def verify_zk_header(request: Request):
     if not verify_zk_proof_header(proof):
         raise HTTPException(status_code=401, detail="Missing or invalid ZK proof header")
     return True
-
-@app.get("/")
-async def root():
-    html_content = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>AURA API Running</title>
-        <style>
-            body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; }
-            .card { background: #1e293b; border-radius: 8px; padding: 24px; max-width: 600px; margin: auto; border: 1px solid #334155; }
-            h1 { color: #38bdf8; }
-            a { color: #38bdf8; }
-        </style>
-    </head>
-    <body>
-        <div class="card">
-            <h1>AURA Enterprise API</h1>
-            <p>Backend is running successfully.</p>
-            <p><a href="/docs">📘 API Documentation</a></p>
-            <p><a href="/healthz">❤️ Health Check</a></p>
-        </div>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
 
 @app.get("/healthz")
 async def healthz():
@@ -833,8 +808,11 @@ async def execute_mcp_app(payload: Dict[str, Any]):
     raise HTTPException(status_code=404, detail="Requested MCP App not found.")
 
 # ------------------------------------------------------------------------------
-# 8. EMBEDDED REACT FRONTEND (FULL v5.0 UI)
+# 8. EMBEDDED REACT FRONTEND (FULL v5.0 UI) – EMBEDDED STRINGS ARE OMITTED FOR BREVITY
+# In the actual file, the full AURA_INTERFACE_JSX, PACKAGE_JSON, etc. are included.
+# They are exactly the same as in the previous version.
 # ------------------------------------------------------------------------------
+
 PACKAGE_JSON = """{
   "name": "aura-frontend",
   "private": true,
@@ -1397,7 +1375,7 @@ def setup_and_build_frontend():
         try:
             subprocess.run([npm, "install"], cwd=base_dir, check=True, capture_output=True)
             subprocess.run([npm, "run", "build"], cwd=base_dir, check=True, capture_output=True)
-            logger.info("Frontend build successful! Assets in ./dist/")
+            logger.info("Frontend build successful! Assets in ./frontend/dist/")
         except subprocess.CalledProcessError as e:
             logger.warning(f"Frontend build failed: {e}. Using fallback UI.")
             write_fallback_ui()
@@ -1411,11 +1389,11 @@ def write_fallback_ui():
         f.write(FALLBACK_HTML)
 
 def mount_static():
-    if os.path.exists("dist"):
-        app.mount("/", StaticFiles(directory="dist", html=True), name="static_spa")
-        logger.info("SPA mounted from ./dist/")
+    if os.path.exists("frontend/dist"):
+        app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static_spa")
+        logger.info("SPA mounted from ./frontend/dist/")
     else:
-        logger.info("dist/ not found. API‑only mode.")
+        logger.info("frontend/dist/ not found. API‑only mode.")
 
 # ------------------------------------------------------------------------------
 # 10. MAIN ENTRYPOINT
