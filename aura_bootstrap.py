@@ -1,4 +1,4 @@
-# ==============================================================================
+   # ==============================================================================
 # AURA ENTERPRISE AI ARCHITECTURE - COMPLETE UNIFIED BOOTSTRAP (v6.4)
 # Copyright (c) 2025-2026 Whyte Chikwendu Nsofor. All rights reserved.
 #
@@ -60,12 +60,9 @@ except ImportError:
     USE_SEARCH = False
     logger.warning("usearch not installed; falling back to linear cosine scan.")
 
-try:
-    from pysqlcipher3 import dbapi2 as sqlcipher
-    logger.info("SQLCipher loaded successfully.")
-except ImportError:
-    import sqlite3 as sqlcipher
-    logger.warning("SQLCipher not found; using plain SQLite for dev/demo.")
+# Use built-in SQLite (no compilation needed)
+import sqlite3 as sqlcipher
+logger.info("Using SQLite (built‑in) for demo.")
 
 # ------------------------------------------------------------------------------
 # 3. ZERO-KNOWLEDGE VERIFIER HOOK
@@ -1400,4 +1397,4 @@ if __name__ == "__main__":
     setup_and_build_frontend()
     mount_static()
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)        
