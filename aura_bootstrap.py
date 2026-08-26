@@ -808,11 +808,8 @@ async def execute_mcp_app(payload: Dict[str, Any]):
     raise HTTPException(status_code=404, detail="Requested MCP App not found.")
 
 # ------------------------------------------------------------------------------
-# 8. EMBEDDED REACT FRONTEND (FULL v5.0 UI) – EMBEDDED STRINGS ARE OMITTED FOR BREVITY
-# In the actual file, the full AURA_INTERFACE_JSX, PACKAGE_JSON, etc. are included.
-# They are exactly the same as in the previous version.
+# 8. EMBEDDED REACT FRONTEND (FULL v5.0 UI)
 # ------------------------------------------------------------------------------
-
 PACKAGE_JSON = """{
   "name": "aura-frontend",
   "private": true,
@@ -1389,11 +1386,12 @@ def write_fallback_ui():
         f.write(FALLBACK_HTML)
 
 def mount_static():
-    if os.path.exists("frontend/dist"):
-        app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static_spa")
-        logger.info("SPA mounted from ./frontend/dist/")
+    # Check for the built React app in the 'dist' directory (root of the project)
+    if os.path.exists("dist"):
+        app.mount("/", StaticFiles(directory="dist", html=True), name="static_spa")
+        logger.info("SPA mounted from ./dist/")
     else:
-        logger.info("frontend/dist/ not found. API‑only mode.")
+        logger.info("dist/ not found. API‑only mode.")
 
 # ------------------------------------------------------------------------------
 # 10. MAIN ENTRYPOINT
