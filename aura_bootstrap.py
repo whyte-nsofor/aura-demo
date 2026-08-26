@@ -15,7 +15,7 @@ Complete Turnkey Enterprise Platform with:
 - API key authentication, /healthz, auto-migrations
 - HNSW vector index, Zero-Trust runtime, multi-agent orchestration
 - Embedded frontend build system (auto‑builds on startup if Node.js is present)
-- Serves React UI from / (root) without interfering with API endpoints
+- Serves React UI from / (root) with proper SPA routing fallback
 ================================================================================
 """
 
@@ -37,7 +37,7 @@ from typing import Dict, List, Any, Optional, Callable, Tuple
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, ValidationError, ConfigDict
 
 # ------------------------------------------------------------------------------
@@ -1339,7 +1339,7 @@ export default function AURAInterface() {
 }"""
 
 # ------------------------------------------------------------------------------
-# 9. FRONTEND BUILD SYSTEM
+# 9. FRONTEND BUILD SYSTEM & SPA MOUNTING (FIXED)
 # ------------------------------------------------------------------------------
 FALLBACK_HTML = """<!DOCTYPE html>
 <html>
@@ -1347,7 +1347,7 @@ FALLBACK_HTML = """<!DOCTYPE html>
 <body><div class="card"><h1>AURA Enterprise Core Active</h1><p>System runtime v6.4 is running in production backend mode.</p><div class="status">HTTP REST API: ONLINE | Port: 8000</div><p><a href="/docs" style="color:#38bdf8;">OpenAPI Documentation</a></p></div></body></html>"""
 
 def setup_and_build_frontend():
-    base_dir = "frontend"
+    base_dir = os.path.join(os.getcwd(), "frontend")
     src_dir = os.path.join(base_dir, "src")
     public_dir = os.path.join(base_dir, "public")
     os.makedirs(src_dir, exist_ok=True)
@@ -1370,34 +1370,60 @@ def setup_and_build_frontend():
     npm = shutil.which("npm")
     if npm:
         try:
+            logger.info("Running 'npm install' in ./frontend...")
             subprocess.run([npm, "install"], cwd=base_dir, check=True, capture_output=True)
+            logger.info("Running 'npm run build' in ./frontend...")
             subprocess.run([npm, "run", "build"], cwd=base_dir, check=True, capture_output=True)
-            logger.info("Frontend build successful! Assets in ./frontend/dist/")
+            logger.info("Frontend build successful! Output generated in root ./dist/")
         except subprocess.CalledProcessError as e:
-            logger.warning(f"Frontend build failed: {e}. Using fallback UI.")
+            logger.error(f"Frontend build failed: {e.stderr.decode('utf-8') if e.stderr else str(e)}. Using fallback UI.")
             write_fallback_ui()
     else:
-        logger.warning("npm not found. Using fallback UI.")
+        logger.warning("npm not found in system PATH. Using fallback UI.")
         write_fallback_ui()
 
 def write_fallback_ui():
-    os.makedirs("dist", exist_ok=True)
-    with open("dist/index.html", "w") as f:
+    dist_dir = os.path.join(os.getcwd(), "dist")
+    os.makedirs(dist_dir, exist_ok=True)
+    with open(os.path.join(dist_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(FALLBACK_HTML)
 
-def mount_static():
-    # Check for the built React app in the 'dist' directory (root of the project)
-    if os.path.exists("dist"):
-        app.mount("/", StaticFiles(directory="dist", html=True), name="static_spa")
-        logger.info("SPA mounted from ./dist/")
-    else:
-        logger.info("dist/ not found. API‑only mode.")
+def mount_static_and_spa(app: FastAPI):
+    dist_path = os.path.join(os.getcwd(), "dist")
+
+    if not os.path.exists(dist_path):
+        logger.warning("dist/ directory not found. Running in API-only mode.")
+        return
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_or_asset(full_path: str):
+        # Exclude backend internal routes
+        if full_path.startswith(("v1/", "healthz", "ready", "docs", "openapi.json", "redoc")):
+            raise HTTPException(status_code=404, detail="API route not found")
+
+        target_file = os.path.join(dist_path, full_path)
+
+        # Check if requested path is a real file in dist/
+        if full_path and os.path.exists(target_file) and os.path.isfile(target_file):
+            return FileResponse(target_file)
+
+        # Fallback to index.html for React SPA client-side routing
+        index_file = os.path.join(dist_path, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+
+        raise HTTPException(status_code=404, detail="Frontend build missing")
+
+# Build assets on script execution (runs before uvicorn starts)
+setup_and_build_frontend()
+
+# Mount SPA routes AFTER all backend API routes are registered
+mount_static_and_spa(app)
 
 # ------------------------------------------------------------------------------
 # 10. MAIN ENTRYPOINT
 # ------------------------------------------------------------------------------
 if __name__ == "__main__":
-    setup_and_build_frontend()
-    mount_static()
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
