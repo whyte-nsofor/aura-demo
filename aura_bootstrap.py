@@ -1,4 +1,4 @@
-   # ==============================================================================
+# ==============================================================================
 # AURA ENTERPRISE AI ARCHITECTURE - COMPLETE UNIFIED BOOTSTRAP (v6.4)
 # Copyright (c) 2025-2026 Whyte Chikwendu Nsofor. All rights reserved.
 #
@@ -36,6 +36,7 @@ from typing import Dict, List, Any, Optional, Callable, Tuple
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, ValidationError, ConfigDict
 
 # ------------------------------------------------------------------------------
@@ -568,6 +569,32 @@ async def verify_zk_header(request: Request):
     if not verify_zk_proof_header(proof):
         raise HTTPException(status_code=401, detail="Missing or invalid ZK proof header")
     return True
+
+@app.get("/")
+async def root():
+    html_content = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>AURA API Running</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; }
+            .card { background: #1e293b; border-radius: 8px; padding: 24px; max-width: 600px; margin: auto; border: 1px solid #334155; }
+            h1 { color: #38bdf8; }
+            a { color: #38bdf8; }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>AURA Enterprise API</h1>
+            <p>Backend is running successfully.</p>
+            <p><a href="/docs">📘 API Documentation</a></p>
+            <p><a href="/healthz">❤️ Health Check</a></p>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 @app.get("/healthz")
 async def healthz():
@@ -1397,4 +1424,4 @@ if __name__ == "__main__":
     setup_and_build_frontend()
     mount_static()
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)        
+    uvicorn.run(app, host="0.0.0.0", port=8000)
