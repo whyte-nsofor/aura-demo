@@ -1,9 +1,6 @@
 services:
   - type: web
     name: aura-demo
-    runtime: node
-    buildCommand: npm install && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_VERSION
-        value: 20.0.0
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python build_frontend.py && cd frontend && npm install && npm run build
+    startCommand: uvicorn aura_bootstrap:app --host 0.0.0.0 --port $PORT
